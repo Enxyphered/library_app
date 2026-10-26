@@ -28,6 +28,32 @@ pub static LATENCY_TELEMETRY: LatencyTelemetry = LatencyTelemetry {
     sub_500us_requests: AtomicU64::new(0),
 };
 
+/// Helper to extract real client IP address, checking reverse proxy headers (X-Forwarded-For, X-Real-IP) first.
+fn extract_client_ip(cx: &Cx) -> String {
+    let hdrs = headers(cx);
+
+    // 1. Check X-Forwarded-For: Caddy appends or sets client IP here (format: client, proxy1, proxy2)
+    if let Some(xff) = hdrs.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
+        if let Some(client_ip) = xff.split(',').next().map(str::trim).filter(|s| !s.is_empty()) {
+            return client_ip.to_string();
+        }
+    }
+
+    // 2. Check X-Real-IP
+    if let Some(x_real_ip) = hdrs.get("x-real-ip").and_then(|v| v.to_str().ok()) {
+        let trimmed = x_real_ip.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+
+    // 3. Check Topcoat's resolved client_ip or remote_addr
+    client_ip(cx)
+        .map(|ip| ip.to_string())
+        .or_else(|| remote_addr(cx).map(|addr| addr.ip().to_string()))
+        .unwrap_or_else(|| "-".to_string())
+}
+
 /// Helper to safely inspect the auth cookie from headers without panicking if CookieJarCell is absent.
 fn extract_auth_username(cx: &Cx) -> Option<String> {
     let cookie_header = headers(cx).get(COOKIE)?.to_str().ok()?;
@@ -95,10 +121,7 @@ impl Layer for RequestLoggingLayer {
                 .and_then(|v| v.to_str().ok())
                 .map(str::to_string);
             let user = extract_auth_username(cx);
-            let ip = client_ip(cx)
-                .map(|ip| ip.to_string())
-                .or_else(|| remote_addr(cx).map(|addr| addr.ip().to_string()))
-                .unwrap_or_else(|| "-".to_string());
+            let ip = extract_client_ip(cx);
 
             let result = next.run(cx, body).await;
             let elapsed = start.elapsed();

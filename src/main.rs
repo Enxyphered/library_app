@@ -10,7 +10,7 @@ use logging::RouterBuilderLoggingExt;
 use topcoat::{
     asset::{AssetBundle, RouterBuilderAssetExt},
     cookie::RouterBuilderCookieExt,
-    router::Router,
+    router::{Router, TrustedProxies},
 };
 
 #[tokio::main]
@@ -27,6 +27,11 @@ async fn main() {
     println!("Database initialized and verified at {}", db_path.display());
 
     let router = Router::builder()
+        .trusted_proxies(
+            TrustedProxies::new()
+                .networks(["127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"])
+                .nearest(1),
+        )
         .cookies()
         .logging()
         .app_context(pool)
