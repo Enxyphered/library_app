@@ -10,13 +10,7 @@ Cargo.lock
 *.sqlite
 *.sqlite3
 
-# AI Agent Instructions, Scratchpads & Brain Data
-AGENTS.md
-GEMINI.md
-DESIGN_STANDARDS.md
-.agy/
-.gemini/
-brain/
+# Topcoat repo
 topcoat/
 
 # Environment, Secrets & Local Overrides
