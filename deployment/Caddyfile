@@ -1,0 +1,49 @@
+{
+    admin off
+    email admin@nciphered.com
+}
+
+lib.nciphered.com {
+    # Rate limiting:
+    # 1) Per-IP Burst protection: max 40 req/sec (guarantees >= 50 unique IPs needed to reach 2,000 req/sec)
+    # 2) Per-IP Sustained quota: max 120 req/min (~2 req/sec)
+    # 3) Per-IP Extended penalty: max 1,000 req/hour (~16 req/min)
+    # 4) Global Backend Ceiling: caps total server traffic to 1,800 req/sec regardless of IP count,
+    #    preventing distributed botnets (5,000+ IPs) from exceeding the backend's 2,000 req/sec capacity.
+    rate_limit {
+        zone client_ip_burst {
+            key {remote_host}
+            events 40
+            window 1s
+        }
+        zone client_ip_sustained {
+            key {remote_host}
+            events 120
+            window 1m
+        }
+        zone client_ip_hourly {
+            key {remote_host}
+            events 1000
+            window 1h
+        }
+        zone global_server_ceiling {
+            key "global_backend"
+            events 1800
+            window 1s
+        }
+    }
+
+    # High performance compression
+    encode zstd gzip
+
+    # Modern security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Reverse proxy to local Topcoat library backend
+    reverse_proxy 127.0.0.1:3000
+}
