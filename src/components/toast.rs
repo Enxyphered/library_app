@@ -32,7 +32,7 @@ pub async fn toast_notification(
         <div id="toast-container" hx-swap-oob="beforeend">
             <div
                 data-controller="toast"
-                data-duration="4000"
+                data-duration="680"
                 class=(class!(
                     "pointer-events-auto flex items-center justify-between gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-200",
                     variant_classes

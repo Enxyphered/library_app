@@ -14,18 +14,24 @@
   const controllers = {
     toast: (el) => {
       // Auto-dismissible toast notification
-      const duration = parseInt(el.getAttribute('data-duration') || '4500', 10);
+      const duration = parseInt(el.getAttribute('data-duration') || '680', 10);
       let timeoutId = null;
+      let dismissed = false;
 
       const dismiss = () => {
-        el.classList.add('opacity-0', 'transition-all', 'duration-300', 'translate-x-4');
+        if (dismissed) return;
+        dismissed = true;
+        clearTimer();
+        el.style.transition = 'opacity 200ms ease, transform 200ms ease';
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-8px) scale(0.95)';
         setTimeout(() => {
           el.remove();
-        }, 300);
+        }, 200);
       };
 
       const startTimer = () => {
-        if (duration > 0 && !timeoutId) {
+        if (duration > 0 && !timeoutId && !dismissed) {
           timeoutId = setTimeout(dismiss, duration);
         }
       };
@@ -48,8 +54,8 @@
       const closeBtn = el.querySelector('[data-action="dismiss"]');
       if (closeBtn) {
         closeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
           e.stopPropagation();
-          clearTimer();
           dismiss();
         });
       }
@@ -472,9 +478,15 @@
     initControllers(document);
   }
 
-  // 2. Automatically re-bind whenever HTMX swaps new content into the DOM
+  // 2. Automatically re-bind whenever HTMX swaps new content into the DOM (including OOB swaps)
   document.addEventListener('htmx:afterSwap', (evt) => {
     initControllers(evt.detail.target);
+  });
+  document.addEventListener('htmx:oobAfterSwap', (evt) => {
+    initControllers(evt.detail.target || evt.target);
+  });
+  document.addEventListener('htmx:load', (evt) => {
+    initControllers(evt.detail && evt.detail.elt ? evt.detail.elt : evt.target);
   });
 
   // 3. Coordinate boosted navigation: update active navigation link styling
